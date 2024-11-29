@@ -1,0 +1,44 @@
+name: Build Android Kernel
+
+on:
+  push:
+    branches:
+      - uvite  # Ou qualquer outra branch que você queira acionar o build
+  pull_request:
+    branches:
+      - uvite  # Ou qualquer outra branch que você queira monitorar
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Check out the repository
+      uses: actions/checkout@v3
+
+    - name: Set up the environment
+      run: |
+        sudo apt update
+        sudo apt install -y bc bison flex libssl-dev libncurses5-dev libelf-dev
+
+    - name: Set up toolchain
+      run: |
+        # Baixe e configure o toolchain (por exemplo, GCC para ARM ou qualquer outro necessário para o seu kernel)
+        wget https://developer.arm.com/-/media/Arm%20Developer%20Website/Tools/Downloads/gnu-toolchain-11.2.rel1-x86_64-aarch64-linux-gnu.tar.xz
+        tar -xf gnu-toolchain-11.2.rel1-x86_64-aarch64-linux-gnu.tar.xz
+        export CROSS_COMPILE=$PWD/gnu-toolchain-11.2.rel1-x86_64-aarch64-linux-gnu/bin/aarch64-linux-gnu-
+
+    - name: Build kernel
+      run: |
+        make ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE defconfig  # Substitua pelo seu arquivo de configuração do kernel
+        make ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE -j$(nproc)  # Substitua pelo número de núcleos que deseja usar
+
+    - name: Archive kernel build output
+      uses: actions/upload-artifact@v3
+      with:
+        name: kernel-output
+        path: arch/arm64/boot/Image  # Substitua pelo caminho do seu kernel gerado (pode ser diferente dependendo da arquitetura)
+
+    - name: Clean up
+      run: |
+        make mrproper  # Limpa os arquivos de configuração antigos
